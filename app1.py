@@ -1,5 +1,3 @@
-!pip install feedparser beautifulsoup4 pandas scikit-learn nltk vaderSentiment streamlit --quiet
-
 import nltk
 nltk.download('stopwords')
 nltk.download('vader_lexicon')
