@@ -1,9 +1,21 @@
-import nltk
-nltk.download('stopwords')
-nltk.download('vader_lexicon')
+# =====================================================
+# STREAMLIT AI NEWS AGGREGATOR (READY FOR CLOUD)
+# =====================================================
+
+import streamlit as st
 
 # =====================================================
-# PHASE 2: IMPORT LIBRARIES
+# 0️⃣ NLTK DATA SETUP
+# =====================================================
+import nltk
+@st.cache_resource
+def download_nltk_data():
+    nltk.download('stopwords')
+    nltk.download('vader_lexicon')
+download_nltk_data()
+
+# =====================================================
+# 1️⃣ IMPORT LIBRARIES
 # =====================================================
 import feedparser
 import pandas as pd
@@ -15,13 +27,12 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+from sklearn.metrics import classification_report, accuracy_score
 import pickle
-import streamlit as st
 from datetime import datetime
 
 # =====================================================
-# PHASE 3: SCRAPE KENYAN RSS FEEDS
+# 2️⃣ SCRAPE KENYAN RSS FEEDS
 # =====================================================
 rss_feeds = {
     "Daily Nation": "https://nation.africa/kenya/rss",
@@ -45,7 +56,7 @@ def scrape_rss(feeds):
     return pd.DataFrame(articles)
 
 # =====================================================
-# PHASE 4: TEXT CLEANING & PREPROCESSING
+# 3️⃣ TEXT CLEANING & PREPROCESSING
 # =====================================================
 stop_words = set(stopwords.words('english'))
 analyzer = SentimentIntensityAnalyzer()
@@ -70,7 +81,7 @@ def get_sentiment(text):
         return "Neutral"
 
 # =====================================================
-# PHASE 5: KEYWORD-BASED CATEGORY (BASELINE)
+# 4️⃣ KEYWORD-BASED CATEGORY (BASELINE)
 # =====================================================
 def classify_article(text):
     if any(word in text for word in ["election", "president", "parliament", "governor", "politics"]):
@@ -87,7 +98,7 @@ def classify_article(text):
         return "Other"
 
 # =====================================================
-# PHASE 6: STREAMLIT APP
+# 5️⃣ STREAMLIT APP
 # =====================================================
 st.title("🇰🇪 Kenyan AI News Aggregator")
 st.write("AI-powered news aggregator with ML classification, sentiment analysis, and recommendations.")
@@ -104,7 +115,6 @@ if st.button("Scrape Latest News"):
         # =====================================================
         # TF-IDF & ML CLASSIFICATION
         # =====================================================
-        # Remove 'Other' for ML
         ml_df = news_df[news_df["category"] != "Other"].copy()
         X = ml_df["clean_text"]
         y = ml_df["category"]
@@ -122,15 +132,12 @@ if st.button("Scrape Latest News"):
 
         y_pred = lr_model.predict(X_test_tfidf)
         st.write("**ML Classification Accuracy:**", accuracy_score(y_test, y_pred))
-        st.write("**Classification Report:**")
         st.text(classification_report(y_test, y_pred))
 
         # Predict full dataset
         news_df["ml_category"] = lr_model.predict(tfidf_vectorizer.transform(news_df["clean_text"]))
 
-        # =====================================================
-        # Save model and vectorizer for deployment
-        # =====================================================
+        # Save model and vectorizer
         with open("logistic_news_model.pkl", "wb") as f:
             pickle.dump(lr_model, f)
         with open("tfidf_vectorizer.pkl", "wb") as f:
@@ -143,18 +150,16 @@ if st.button("Scrape Latest News"):
         st.dataframe(news_df[["title", "source", "ml_category", "sentiment", "link"]].head(10))
 
         # =====================================================
-        # 7️⃣ Recommendations
+        # 6️⃣ RECOMMENDATIONS
         # =====================================================
         st.subheader("Get Article Recommendations")
         article_title = st.selectbox("Select an article:", news_df["title"])
         if article_title:
             idx = news_df[news_df["title"] == article_title].index[0]
             
-            # Recommendation engine
             tfidf_matrix = tfidf_vectorizer.transform(news_df["clean_text"])
             cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
-            similarity_scores = list(enumerate(cosine_sim[idx]))
-            similarity_scores = sorted(similarity_scores, key=lambda x: x[1], reverse=True)[1:6]
+            similarity_scores = sorted(list(enumerate(cosine_sim[idx])), key=lambda x: x[1], reverse=True)[1:6]
             recommended_indices = [i[0] for i in similarity_scores]
             recommendations = news_df.iloc[recommended_indices][["title", "source", "ml_category", "sentiment", "link"]]
 
