@@ -1,0 +1,7 @@
+streamlit
+pandas
+feedparser
+beautifulsoup4
+nltk
+scikit-learn
+vaderSentiment
